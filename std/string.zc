@@ -58,7 +58,7 @@ impl String {
     
     fn substring(self, start: usize, len: usize) -> String {
         if (start + len > self.length()) {
-            printf("Panic: substring out of bounds\n");
+            fprintf(stderr, "%s:%d (%s): Panic: substring out of bounds\n", __FILE__, __LINE__, __func__);
             exit(1);
         }
         var v = Vec<char>::new();

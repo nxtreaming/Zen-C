@@ -559,6 +559,41 @@ zc run app.zc --cc zig
 make zig
 ```
 
+### C++ Interop
+
+Zen C can generate C++-compatible code with the `--cpp` flag, allowing seamless integration with C++ libraries.
+
+```bash
+# Direct compilation with g++
+zc app.zc --cpp
+
+# Or transpile for manual build
+zc transpile app.zc --cpp
+g++ out.c my_cpp_lib.o -o app
+```
+
+#### Using C++ in Zen C
+
+Include C++ headers and use raw blocks for C++ code:
+
+```zc
+include <vector>
+include <iostream>
+
+raw {
+    std::vector<int> make_vec(int a, int b) {
+        return {a, b};
+    }
+}
+
+fn main() {
+    var v = make_vec(1, 2);
+    raw { std::cout << "Size: " << v.size() << std::endl; }
+}
+```
+
+> **Note:** The `--cpp` flag switches the backend to `g++` and emits C++-compatible code (uses `auto` instead of `__auto_type`, function overloads instead of `_Generic`, and explicit casts for `void*`).
+
 ---
 
 ## Contributing

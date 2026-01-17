@@ -52,7 +52,43 @@ void emit_preamble(ParserContext *ctx, FILE *out)
               out);
         fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
         fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
-        fputs("#ifdef __TINYC__\n#define __auto_type __typeof__\n#endif\n", out);
+
+        // C++ compatibility
+        if (g_config.use_cpp)
+        {
+            // For C++: define ZC_AUTO as auto, include compat.h macros inline
+            fputs("#define ZC_AUTO auto\n", out);
+            fputs("#define ZC_CAST(T, x) static_cast<T>(x)\n", out);
+            // C++ _z_str via overloads
+            fputs("inline const char* _z_str(bool)               { return \"%d\"; }\n", out);
+            fputs("inline const char* _z_str(char)               { return \"%c\"; }\n", out);
+            fputs("inline const char* _z_str(int)                { return \"%d\"; }\n", out);
+            fputs("inline const char* _z_str(unsigned int)       { return \"%u\"; }\n", out);
+            fputs("inline const char* _z_str(long)               { return \"%ld\"; }\n", out);
+            fputs("inline const char* _z_str(unsigned long)      { return \"%lu\"; }\n", out);
+            fputs("inline const char* _z_str(long long)          { return \"%lld\"; }\n", out);
+            fputs("inline const char* _z_str(unsigned long long) { return \"%llu\"; }\n", out);
+            fputs("inline const char* _z_str(float)              { return \"%f\"; }\n", out);
+            fputs("inline const char* _z_str(double)             { return \"%f\"; }\n", out);
+            fputs("inline const char* _z_str(char*)              { return \"%s\"; }\n", out);
+            fputs("inline const char* _z_str(const char*)        { return \"%s\"; }\n", out);
+            fputs("inline const char* _z_str(void*)              { return \"%p\"; }\n", out);
+        }
+        else
+        {
+            // C mode
+            fputs("#define ZC_AUTO __auto_type\n", out);
+            fputs("#define ZC_CAST(T, x) ((T)(x))\n", out);
+            fputs("#ifdef __TINYC__\n#define __auto_type __typeof__\n#endif\n", out);
+            fputs("#define _z_str(x) _Generic((x), _Bool: \"%d\", char: \"%c\", "
+                  "signed char: \"%c\", unsigned char: \"%u\", short: \"%d\", "
+                  "unsigned short: \"%u\", int: \"%d\", unsigned int: \"%u\", "
+                  "long: \"%ld\", unsigned long: \"%lu\", long long: \"%lld\", "
+                  "unsigned long long: \"%llu\", float: \"%f\", double: \"%f\", "
+                  "char*: \"%s\", void*: \"%p\")\n",
+                  out);
+        }
+
         fputs("typedef size_t usize;\ntypedef char* string;\n", out);
         if (ctx->has_async)
         {
@@ -68,19 +104,19 @@ void emit_preamble(ParserContext *ctx, FILE *out)
               "uint64_t\n",
               out);
         fputs("#define F32 float\n#define F64 double\n", out);
-        fputs("#define _z_str(x) _Generic((x), _Bool: \"%d\", char: \"%c\", "
-              "signed char: \"%c\", unsigned char: \"%u\", short: \"%d\", "
-              "unsigned short: \"%u\", int: \"%d\", unsigned int: \"%u\", "
-              "long: \"%ld\", unsigned long: \"%lu\", long long: \"%lld\", "
-              "unsigned long long: \"%llu\", float: \"%f\", double: \"%f\", "
-              "char*: \"%s\", void*: \"%p\")\n",
-              out);
 
         // Memory Mapping.
-        fputs("#define z_malloc malloc\n#define z_realloc realloc\n#define z_free "
-              "free\n#define "
-              "z_print printf\n",
-              out);
+        if (g_config.use_cpp)
+        {
+            // C++ needs explicit casts for void* conversions
+            fputs("#define z_malloc(sz) static_cast<char*>(malloc(sz))\n", out);
+            fputs("#define z_realloc(p, sz) static_cast<char*>(realloc(p, sz))\n", out);
+        }
+        else
+        {
+            fputs("#define z_malloc malloc\n#define z_realloc realloc\n", out);
+        }
+        fputs("#define z_free free\n#define z_print printf\n", out);
         fputs("void z_panic(const char* msg) { fprintf(stderr, \"Panic: %s\\n\", "
               "msg); exit(1); }\n",
               out);
@@ -93,19 +129,41 @@ void emit_preamble(ParserContext *ctx, FILE *out)
               "\"Assertion failed: \" "
               "__VA_ARGS__); exit(1); }\n",
               out);
-        fputs("string _z_readln_raw() { "
-              "size_t cap = 64; size_t len = 0; "
-              "char *line = z_malloc(cap); "
-              "if(!line) return NULL; "
-              "int c; "
-              "while((c = fgetc(stdin)) != EOF) { "
-              "if(c == '\\n') break; "
-              "if(len + 1 >= cap) { cap *= 2; char *n = z_realloc(line, cap); "
-              "if(!n) { z_free(line); return NULL; } line = n; } "
-              "line[len++] = c; } "
-              "if(len == 0 && c == EOF) { z_free(line); return NULL; } "
-              "line[len] = 0; return line; }\n",
-              out);
+
+        // C++ compatible readln helper
+        if (g_config.use_cpp)
+        {
+            fputs(
+                "string _z_readln_raw() { "
+                "size_t cap = 64; size_t len = 0; "
+                "char *line = static_cast<char*>(malloc(cap)); "
+                "if(!line) return NULL; "
+                "int c; "
+                "while((c = fgetc(stdin)) != EOF) { "
+                "if(c == '\\n') break; "
+                "if(len + 1 >= cap) { cap *= 2; char *n = static_cast<char*>(realloc(line, cap)); "
+                "if(!n) { free(line); return NULL; } line = n; } "
+                "line[len++] = c; } "
+                "if(len == 0 && c == EOF) { free(line); return NULL; } "
+                "line[len] = 0; return line; }\n",
+                out);
+        }
+        else
+        {
+            fputs("string _z_readln_raw() { "
+                  "size_t cap = 64; size_t len = 0; "
+                  "char *line = z_malloc(cap); "
+                  "if(!line) return NULL; "
+                  "int c; "
+                  "while((c = fgetc(stdin)) != EOF) { "
+                  "if(c == '\\n') break; "
+                  "if(len + 1 >= cap) { cap *= 2; char *n = z_realloc(line, cap); "
+                  "if(!n) { z_free(line); return NULL; } line = n; } "
+                  "line[len++] = c; } "
+                  "if(len == 0 && c == EOF) { z_free(line); return NULL; } "
+                  "line[len] = 0; return line; }\n",
+                  out);
+        }
         fputs("int _z_scan_helper(const char *fmt, ...) { char *l = "
               "_z_readln_raw(); if(!l) return "
               "0; va_list ap; va_start(ap, fmt); int r = vsscanf(l, fmt, ap); "
@@ -809,27 +867,45 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
 
     fprintf(out, "typedef struct { void **data; int len; int cap; } Vec;\n");
     fprintf(out, "#define Vec_new() (Vec){.data=0, .len=0, .cap=0}\n");
-    fprintf(out, "void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { "
-                 "v->cap = v->cap?v->cap*2:8; "
-                 "v->data = z_realloc(v->data, v->cap * sizeof(void*)); } "
-                 "v->data[v->len++] = item; }\n");
+
+    if (g_config.use_cpp)
+    {
+        fprintf(out, "void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { "
+                     "v->cap = v->cap?v->cap*2:8; "
+                     "v->data = static_cast<void**>(realloc(v->data, v->cap * sizeof(void*))); } "
+                     "v->data[v->len++] = item; }\n");
+        fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = "
+                     "count > 8 ? "
+                     "count : 8; v.data = static_cast<void**>(malloc(v.cap * sizeof(void*))); "
+                     "v.len = 0; va_list "
+                     "args; "
+                     "va_start(args, count); for(int i=0; i<count; i++) { v.data[v.len++] = "
+                     "va_arg(args, void*); } va_end(args); return v; }\n");
+    }
+    else
+    {
+        fprintf(out, "void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { "
+                     "v->cap = v->cap?v->cap*2:8; "
+                     "v->data = z_realloc(v->data, v->cap * sizeof(void*)); } "
+                     "v->data[v->len++] = item; }\n");
+        fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = "
+                     "count > 8 ? "
+                     "count : 8; v.data = z_malloc(v.cap * sizeof(void*)); v.len = 0; va_list "
+                     "args; "
+                     "va_start(args, count); for(int i=0; i<count; i++) { v.data[v.len++] = "
+                     "va_arg(args, void*); } va_end(args); return v; }\n");
+    }
     fprintf(out, "#define Vec_push(v, i) _z_vec_push(&(v), (void*)(long)(i))\n");
-    fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = "
-                 "count > 8 ? "
-                 "count : 8; v.data = z_malloc(v.cap * sizeof(void*)); v.len = 0; va_list "
-                 "args; "
-                 "va_start(args, count); for(int i=0; i<count; i++) { v.data[v.len++] = "
-                 "va_arg(args, void*); } va_end(args); return v; }\n");
 
     if (g_config.is_freestanding)
     {
-        fprintf(out, "#define _z_check_bounds(index, limit) ({ __auto_type _i = "
+        fprintf(out, "#define _z_check_bounds(index, limit) ({ ZC_AUTO _i = "
                      "(index); if(_i < 0 "
                      "|| _i >= (limit)) { z_panic(\"index out of bounds\"); } _i; })\n");
     }
     else
     {
-        fprintf(out, "#define _z_check_bounds(index, limit) ({ __auto_type _i = "
+        fprintf(out, "#define _z_check_bounds(index, limit) ({ ZC_AUTO _i = "
                      "(index); if(_i < 0 "
                      "|| _i >= (limit)) { fprintf(stderr, \"Index out of bounds: "
                      "%%ld (limit "

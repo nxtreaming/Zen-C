@@ -37,7 +37,7 @@ void print_usage()
     printf("  transpile Transpile to C code only (no compilation)\n");
     printf("  lsp     Start Language Server\n");
     printf("Options:\n");
-    printf("  --version       Print version information");
+    printf("  --version       Print version information\n");
     printf("  -o <file>       Output executable name\n");
     printf("  --emit-c        Keep generated C file (out.c)\n");
     printf("  --freestanding  Freestanding mode (no stdlib)\n");
@@ -47,6 +47,7 @@ void print_usage()
     printf("  -v, --verbose   Verbose output\n");
     printf("  -q, --quiet     Quiet output\n");
     printf("  -c              Compile only (produce .o)\n");
+    printf("  --cpp           Use C++ mode.\n");
 }
 
 int main(int argc, char **argv)
@@ -140,6 +141,11 @@ int main(int argc, char **argv)
         else if (strcmp(arg, "--freestanding") == 0)
         {
             g_config.is_freestanding = 1;
+        }
+        else if (strcmp(arg, "--cpp") == 0)
+        {
+            strcpy(g_config.cc, "g++");
+            g_config.use_cpp = 1;
         }
         else if (strcmp(arg, "--check") == 0)
         {

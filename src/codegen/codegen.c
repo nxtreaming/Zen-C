@@ -174,7 +174,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 }
                 else
                 {
-                    fprintf(out, "__auto_type %s = _m_%d.val; ", c->match_case.binding_name, id);
+                    fprintf(out, "ZC_AUTO %s = _m_%d.val; ", c->match_case.binding_name, id);
                 }
             }
             if (is_result)
@@ -188,8 +188,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                     }
                     else
                     {
-                        fprintf(out, "__auto_type %s = _m_%d.val; ", c->match_case.binding_name,
-                                id);
+                        fprintf(out, "ZC_AUTO %s = _m_%d.val; ", c->match_case.binding_name, id);
                     }
                 }
                 else
@@ -201,8 +200,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                     }
                     else
                     {
-                        fprintf(out, "__auto_type %s = _m_%d.err; ", c->match_case.binding_name,
-                                id);
+                        fprintf(out, "ZC_AUTO %s = _m_%d.err; ", c->match_case.binding_name, id);
                     }
                 }
             }
@@ -217,7 +215,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 {
                     f = c->match_case.pattern;
                 }
-                fprintf(out, "__auto_type %s = _m_%d.data.%s; ", c->match_case.binding_name, id, f);
+                fprintf(out, "ZC_AUTO %s = _m_%d.data.%s; ", c->match_case.binding_name, id, f);
             }
         }
 
@@ -1838,7 +1836,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
-            fprintf(out, "__auto_type %s = ", node->for_range.var_name);
+            fprintf(out, "ZC_AUTO %s = ", node->for_range.var_name);
         }
         codegen_expression(ctx, node->for_range.start, out);
         fprintf(out, "; %s < ", node->for_range.var_name);

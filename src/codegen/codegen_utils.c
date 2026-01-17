@@ -515,7 +515,7 @@ void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t, FILE *out)
         }
         else
         {
-            fprintf(out, "__auto_type");
+            fprintf(out, "ZC_AUTO");
         }
     }
 }

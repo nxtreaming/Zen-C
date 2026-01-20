@@ -1783,7 +1783,6 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         {
             char *tname = NULL;
-            // Use type_info with codegen_type_to_string if available
             if (node->type_info)
             {
                 tname = codegen_type_to_string(node->type_info);
@@ -1795,11 +1794,16 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
 
             if (tname)
             {
-                // Cleanup attribute
-                ASTNode *def = find_struct_def(ctx, tname);
+                char *clean_type = tname;
+                if (strncmp(clean_type, "struct ", 7) == 0)
+                {
+                    clean_type += 7;
+                }
+
+                ASTNode *def = find_struct_def(ctx, clean_type);
                 if (def && def->type_info && def->type_info->traits.has_drop)
                 {
-                    fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", tname);
+                    fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", clean_type);
                 }
 
                 // Emit Variable with Type
@@ -1829,6 +1833,18 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 if (inferred && strcmp(inferred, "__auto_type") != 0)
                 {
+                    char *clean_type = inferred;
+                    if (strncmp(clean_type, "struct ", 7) == 0)
+                    {
+                        clean_type += 7;
+                    }
+
+                    ASTNode *def = find_struct_def(ctx, clean_type);
+                    if (def && def->type_info && def->type_info->traits.has_drop)
+                    {
+                        fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", clean_type);
+                    }
+
                     emit_var_decl_type(ctx, out, inferred, node->var_decl.name);
                     add_symbol(ctx, node->var_decl.name, inferred, NULL);
                     fprintf(out, " = ");

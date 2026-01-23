@@ -1980,6 +1980,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
     }
     free(new_fn->func.name);
     new_fn->func.name = xstrdup(mangled);
+    new_fn->func.generic_params = NULL;
 
     register_func(ctx, mangled, new_fn->func.arg_count, new_fn->func.defaults,
                   new_fn->func.arg_types, new_fn->func.ret_type_info, new_fn->func.is_varargs, 0,

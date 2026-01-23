@@ -252,9 +252,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 f->func.args = na;
 
                 // Register function for lookup
-                register_func(ctx, mangled, f->func.arg_count, f->func.defaults, f->func.arg_types,
-                              f->func.ret_type_info, f->func.is_varargs, f->func.is_async,
-                              f->token);
+                if (f->func.generic_params)
+                {
+                    register_func_template(ctx, mangled, f->func.generic_params, f);
+                }
+                else
+                {
+                    register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                  f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
+                                  f->func.is_async, f->token);
+                }
 
                 if (!h)
                 {
@@ -284,9 +291,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     f->func.args = na;
 
                     // Register function for lookup
-                    register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
-                                  f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
-                                  f->func.is_async, f->token);
+                    if (f->func.generic_params)
+                    {
+                        register_func_template(ctx, mangled, f->func.generic_params, f);
+                    }
+                    else
+                    {
+                        register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                      f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
+                                      f->func.is_async, f->token);
+                    }
 
                     if (!h)
                     {
@@ -505,9 +519,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     free(f->func.args);
                     f->func.args = na;
 
-                    register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
-                                  f->func.arg_types, f->func.ret_type_info, f->func.is_varargs, 0,
-                                  f->token);
+                    if (f->func.generic_params)
+                    {
+                        register_func_template(ctx, mangled, f->func.generic_params, f);
+                    }
+                    else
+                    {
+                        register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                      f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
+                                      0, f->token);
+                    }
 
                     if (!h)
                     {
@@ -534,9 +555,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         char *na = patch_self_args(f->func.args, name1);
                         free(f->func.args);
                         f->func.args = na;
-                        register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
-                                      f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
-                                      1, f->token);
+                        if (f->func.generic_params)
+                        {
+                            register_func_template(ctx, mangled, f->func.generic_params, f);
+                        }
+                        else
+                        {
+                            register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                          f->func.arg_types, f->func.ret_type_info,
+                                          f->func.is_varargs, 1, f->token);
+                        }
                         if (!h)
                         {
                             h = f;

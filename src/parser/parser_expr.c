@@ -4330,6 +4330,141 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 node->resolved_type = xstrdup("unknown");
             }
 
+            // Handle Generic Method Call: object.method<T>
+            if (lexer_peek(l).type == TOK_LANGLE)
+            {
+                Lexer lookahead = *l;
+                lexer_next(&lookahead);
+
+                int valid_generic = 0;
+                int saved = ctx->is_speculative;
+                ctx->is_speculative = 1;
+
+                // Speculatively check if it's a valid generic list
+                while (1)
+                {
+                    parse_type(ctx, &lookahead);
+                    if (lexer_peek(&lookahead).type == TOK_COMMA)
+                    {
+                        lexer_next(&lookahead);
+                        continue;
+                    }
+                    if (lexer_peek(&lookahead).type == TOK_RANGLE)
+                    {
+                        valid_generic = 1;
+                    }
+                    break;
+                }
+                ctx->is_speculative = saved;
+
+                if (valid_generic)
+                {
+                    lexer_next(l); // consume <
+
+                    char **concrete = xmalloc(sizeof(char *) * 8);
+                    char **unmangled = xmalloc(sizeof(char *) * 8);
+                    int argc = 0;
+                    while (1)
+                    {
+                        Type *t = parse_type_formal(ctx, l);
+                        concrete[argc] = type_to_string(t);
+                        unmangled[argc] = type_to_c_string(t);
+                        argc++;
+                        if (lexer_peek(l).type == TOK_COMMA)
+                        {
+                            lexer_next(l);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    if (lexer_next(l).type != TOK_RANGLE)
+                    {
+                        zpanic_at(lexer_peek(l), "Expected >");
+                    }
+
+                    // Locate the generic template
+                    char *mn = NULL; // method name
+                    char full_name[1024];
+
+                    // If logic above found a sig, we have a mangled name in node->type_info->name
+                    // But for templates, find_func might have failed.
+                    // Construct potential template name: Struct__method
+                    char *struct_name = NULL;
+                    if (lhs->type_info)
+                    {
+                        if (lhs->type_info->kind == TYPE_STRUCT)
+                        {
+                            struct_name = lhs->type_info->name;
+                        }
+                        else if (lhs->type_info->kind == TYPE_POINTER && lhs->type_info->inner &&
+                                 lhs->type_info->inner->kind == TYPE_STRUCT)
+                        {
+                            struct_name = lhs->type_info->inner->name;
+                        }
+                    }
+
+                    if (struct_name)
+                    {
+                        sprintf(full_name, "%s__%s", struct_name, node->member.field);
+
+                        // Join types
+                        char all_concrete[1024] = {0};
+                        char all_unmangled[1024] = {0};
+                        for (int i = 0; i < argc; i++)
+                        {
+                            if (i > 0)
+                            {
+                                strcat(all_concrete, ",");
+                                strcat(all_unmangled, ",");
+                            }
+                            strcat(all_concrete, concrete[i]);
+                            strcat(all_unmangled, unmangled[i]);
+                            free(concrete[i]);
+                            free(unmangled[i]);
+                        }
+                        free(concrete);
+                        free(unmangled);
+
+                        mn = instantiate_function_template(ctx, full_name, all_concrete,
+                                                           all_unmangled);
+                        if (mn)
+                        {
+                            // Ensure member field reflects the instantiated name (suffix only)
+                            // The instantiate returns Struct__method_int. We need method_int part?
+                            // Actually member access codegen expects .field to be unmangled or
+                            // checks lookup. But here we are resolving a specific method instance.
+
+                            // AST doesn't support generic member node well, typical approach:
+                            // Replace member node with a special "MEMBER_GENERIC" or hack the field
+                            // name. Hack: Update field name to include mangle suffix? But codegen
+                            // does "Struct__Field". If full_name is Struct__method, mn is
+                            // Struct__method_int. Codegen does: struct_name + "__" + field. So if
+                            // we set field to "method_int", codegen does Struct__method_int.
+
+                            char *p = strstr(mn, "__");
+                            if (p)
+                            {
+                                free(node->member.field);
+                                node->member.field = xstrdup(p + 2);
+                            }
+
+                            // Update Type Info
+                            Type *ft = type_new(TYPE_FUNCTION);
+                            ft->name = xstrdup(mn);
+                            // Look up return type from instantiated func
+                            FuncSig *isig = find_func(ctx, mn);
+                            if (isig)
+                            {
+                                ft->inner = isig->ret_type;
+                            }
+                            node->type_info = ft;
+                        }
+                    }
+                }
+            }
+
             lhs = node;
             continue;
         }

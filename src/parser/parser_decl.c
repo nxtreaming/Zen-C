@@ -187,8 +187,12 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
 
     if (gen_param)
     {
-        register_func_template(ctx, name, gen_param, node);
-        return NULL;
+        node->func.generic_params = xstrdup(gen_param);
+        if (!ctx->current_impl_struct)
+        {
+            register_func_template(ctx, name, gen_param, node);
+            return NULL;
+        }
     }
     if (!ctx->current_impl_struct)
     {

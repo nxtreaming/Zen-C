@@ -56,8 +56,8 @@ void print_usage()
 int main(int argc, char **argv)
 {
     memset(&g_config, 0, sizeof(g_config));
-#ifdef __COSMOPOLITAN__
-    strcpy(g_config.cc, "cosmocc");
+#ifdef _WIN32
+    strcpy(g_config.cc, "gcc.exe");
 #else
     strcpy(g_config.cc, "gcc");
 #endif

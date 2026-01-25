@@ -182,7 +182,7 @@ uninstall-ape:
 
 # Clean
 clean:
-	$(RM) $(OBJ_DIR) obj-ape $(TARGET) out.c plugins/*.so out
+	$(RM) $(OBJ_DIR) obj-ape $(TARGET) out.c plugins/*.so a.out*
 	@echo "=> Clean complete!"
 
 # Test

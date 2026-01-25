@@ -51,6 +51,7 @@ Join the discussion, share demos, ask questions, or report bugs in the official 
         - [Const Arguments](#const-arguments)
         - [Default Arguments](#default-arguments)
         - [Lambdas (Closures)](#lambdas-closures)
+        - [Raw Function Pointers](#raw-function-pointers)
         - [Variadic Functions](#variadic-functions)
     - [5. Control Flow](#5-control-flow)
         - [Conditionals](#conditionals)
@@ -317,6 +318,24 @@ Anonymous functions that can capture their environment.
 var factor = 2;
 var double = x -> x * factor;  // Arrow syntax
 var full = fn(x: int) -> int { return x * factor; }; // Block syntax
+```
+
+#### Raw Function Pointers
+Zen C supports raw C function pointers using the `fn*` syntax. This allows seamless interop with C libraries that expect function pointers without closure overhead.
+
+```zc
+// Function taking a raw function pointer
+fn set_callback(cb: fn*(int)) {
+    cb(42);
+}
+
+// Function returning a raw function pointer
+fn get_callback() -> fn*(int) {
+    return my_handler;
+}
+
+// Pointers to function pointers are supported (fn**)
+var pptr: fn**(int) = &ptr;
 ```
 
 #### Variadic Functions

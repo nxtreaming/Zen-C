@@ -3625,7 +3625,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                         }
                         else if (t->kind == TYPE_STRING)
                         {
-                            strcat(fmt, "%s");
+                            strcat(fmt, "%ms");
                         }
                         else if (t->kind == TYPE_CHAR || t->kind == TYPE_I8 || t->kind == TYPE_U8 ||
                                  t->kind == TYPE_BYTE)

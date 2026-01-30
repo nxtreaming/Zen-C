@@ -7,7 +7,10 @@ include <stdarg.h>
 
 // These work directly with const char* in extern declarations
 extern fn vprintf(fmt: const char*, ap: va_list) -> int;
-extern fn vsnprintf(str: char*, size: usize, fmt: const char*, ap: va_list) -> int;
+
+// vsnprintf is problematic on macOS because it's a macro that expands to a builtin with a different signature
+// so we wrap it in a C function to avoid the conflict
+extern fn _z_vsnprintf(str: char*, size: usize, fmt: const char*, ap: va_list) -> int;
 
 // EOF is typically -1, but we define it for portability
 def Z_EOF = -1;
@@ -18,6 +21,9 @@ def Z_EOF = -1;
 raw {
     void* _z_get_stdin(void) { return stdin; }
     int _z_fgetc(void* stream) { return fgetc((FILE*)stream); }
+    int _z_vsnprintf(char* str, size_t size, const char* fmt, va_list ap) {
+        return vsnprintf(str, size, fmt, ap);
+    }
 }
 
 extern fn _z_get_stdin() -> void*;
@@ -27,16 +33,20 @@ fn format(fmt: char*, ...) -> char* {
     static let buffer: char[1024];
     let ap: va_list;
     va_start(ap, fmt);
-    vsnprintf(buffer, 1024, fmt, ap);
+
+    _z_vsnprintf(buffer, 1024, fmt, ap);
     va_end(ap);
+
     return (char*)buffer;
 }
 
 fn format_into(buffer: char*, size: usize, fmt: char*, ...) -> int {
     let ap: va_list;
     va_start(ap, fmt);
-    let ret = vsnprintf(buffer, size, fmt, ap);
+
+    let ret = _z_vsnprintf(buffer, size, fmt, ap);
     va_end(ap);
+
     return ret;
 }
 
@@ -46,8 +56,10 @@ fn format_new(fmt: char*, ...) -> char* {
     
     let ap: va_list;
     va_start(ap, fmt);
-    vsnprintf(buffer, 1024, fmt, ap);
+
+    _z_vsnprintf(buffer, 1024, fmt, ap);
     va_end(ap);
+
     return buffer;
 }
 

@@ -290,6 +290,18 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 {
                     is_null_compare = 1;
                 }
+                else if (node->binary.right->type == NODE_EXPR_LITERAL &&
+                         node->binary.right->literal.type_kind == LITERAL_INT &&
+                         node->binary.right->literal.int_val == 0)
+                {
+                    is_null_compare = 1;
+                }
+                else if (node->binary.left->type == NODE_EXPR_LITERAL &&
+                         node->binary.left->literal.type_kind == LITERAL_INT &&
+                         node->binary.left->literal.int_val == 0)
+                {
+                    is_null_compare = 1;
+                }
 
                 if (is_null_compare)
                 {
@@ -1121,9 +1133,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         break;
     }
     case NODE_EXPR_CAST:
-        fprintf(out, "(%s)(", node->cast.target_type);
+        fprintf(out, "((%s)(", node->cast.target_type);
         codegen_expression(ctx, node->cast.expr, out);
-        fprintf(out, ")");
+        fprintf(out, "))");
         break;
     case NODE_EXPR_SIZEOF:
         if (node->size_of.target_type)

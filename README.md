@@ -1,7 +1,7 @@
 
 <div align="center">
 
-[English](README.md) • [简体中文](README_ZH_CN.md) • [繁體中文](README_ZH_TW.md) • [Español](README_ES.md)
+[English](README.md) • [简体中文](README_ZH_CN.md) • [繁體中文](README_ZH_TW.md) • [Español](README_ES.md) • [Italiano](README_IT.md)
 
 </div>
 
@@ -13,7 +13,7 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
-[![Version](https://img.shields.io/badge/version-0.1.0-orange)]()
+[![Version](https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange)]()
 [![Platform](https://img.shields.io/badge/platform-linux-lightgrey)]()
 
 *Write like a high-level language, run like C.*
@@ -100,6 +100,7 @@ Join the discussion, share demos, ask questions, or report bugs in the official 
         - [Named Constraints](#named-constraints)
     - [15. Build Directives](#15-build-directives)
     - [16. Keywords](#16-keywords)
+    - [17. C Interoperability](#17-c-interoperability)
 - [Standard Library](#standard-library)
 - [Tooling](#tooling)
     - [Language Server (LSP)](#language-server-lsp)
@@ -165,7 +166,7 @@ zc repl
 
 ### Environment Variables
 
-You can set `ZC_ROOT` to specify the location of the Standard Library (standard imports like `import "std/vector.zc"`). This allows you to run `zc` from any directory.
+You can set `ZC_ROOT` to specify the location of the Standard Library (standard imports like `import "std/vec.zc"`). This allows you to run `zc` from any directory.
 
 ```bash
 export ZC_ROOT=/path/to/Zen-C
@@ -204,7 +205,11 @@ let y: const int = 10;  // Read-only (Type qualified)
 
 | Type | C Equivalent | Description |
 |:---|:---|:---|
-| `int`, `uint` | `int`, `unsigned int` | Platform standard integer |
+| `int`, `uint` | `int32_t`, `uint32_t` | 32-bit signed/unsigned integer |
+| `c_char`, `c_uchar` | `char`, `unsigned char` | C char / unsigned char (Interop) |
+| `c_short`, `c_ushort` | `short`, `unsigned short` | C short / unsigned short (Interop) |
+| `c_int`, `c_uint` | `int`, `unsigned int` | C int / unsigned int (Interop) |
+| `c_long`, `c_ulong` | `long`, `unsigned long` | C long / unsigned long (Interop) |
 | `I8` .. `I128` or `i8` .. `i128` | `int8_t` .. `__int128_t` | Signed fixed-width integers |
 | `U8` .. `U128` or `u8` .. `u128` | `uint8_t` .. `__uint128_t` | Unsigned fixed-width integers |
 | `isize`, `usize` | `ptrdiff_t`, `size_t` | Pointer-sized integers |
@@ -216,6 +221,12 @@ let y: const int = 10;  // Read-only (Type qualified)
 | `U0`, `u0`, `void` | `void` | Empty type |
 | `iN` (for example, `i256`) | `_BitInt(N)` | Arbitrary bit-width signed integer (C23) |
 | `uN` (for example, `u42`) | `unsigned _BitInt(N)` | Arbitrary bit-width unsigned integer (C23) |
+
+> **Best Practices for Portable Code**
+>
+> - Use **Portable Types** (`int`, `uint`, `i64`, `u8`, etc.) for all pure Zen C logic. `int` is guaranteed to be 32-bit signed on all architectures.
+> - Use **C Interop Types** (`c_int`, `c_char`, `c_long`) **only** when interacting with C libraries (FFI). Their size varies by platform and C compiler (e.g. `c_long` size differs between Windows and Linux).
+> - Use `isize` and `usize` for array indexing and memory pointer arithmetic.
 
 ### 3. Aggregate Types
 
@@ -494,8 +505,15 @@ for i in 0..<10 { ... }     // Exclusive (Explicit)
 for i in 0..=10 { ... }     // Inclusive (0 to 10)
 for i in 0..10 step 2 { ... }
 
-// Iterator (Vec, Array, or custom Iterable)
-for item in collection { ... }
+// Iterator (Vec or custom Iterable)
+for item in vec { ... }
+
+// Iterate over fixed-size arrays directly
+let arr: int[5] = [1, 2, 3, 4, 5];
+for val in arr {
+    // val is int
+    println "{val}";
+}
 
 // While
 while x < 10 { ... }
@@ -607,7 +625,7 @@ Zen C supports a shorthand for prompting user input using the `?` prefix.
 - `? "Enter age: " (age)`: Prints prompt and scans input into the variable `age`.
     - Format specifiers are automatically inferred based on variable type.
 
-```c
+```zc
 let age: int;
 ? "How old are you? " (age);
 println "You are {age} years old.";
@@ -939,6 +957,7 @@ Decorate functions and structs to modify compiler behavior.
 | `@host` | Fn | CUDA: Host function (`__host__`). |
 | `@comptime` | Fn | Helper function available for compile-time execution. |
 | `@derive(...)` | Struct | Auto-implement traits. Supports `Debug`, `Eq` (Smart Derive), `Copy`, `Clone`. |
+| `@ctype("type")` | Fn Param | Overrides generated C type for a parameter. |
 | `@<custom>` | Any | Passes generic attributes to C (e.g. `@flatten`, `@alias("name")`). |
 
 #### Custom Attributes
@@ -989,12 +1008,13 @@ Zen C simplifies the complex GCC constraint syntax with named bindings.
 // Syntax: : out(variable) : in(variable) : clobber(reg)
 // Uses {variable} placeholder syntax for readability
 
-fn add(a: int, b: int) -> int {
+fn add_five(x: int) -> int {
     let result: int;
     asm {
-        "add {result}, {a}, {b}"
+        "mov {x}, {result}"
+        "add $5, {result}"
         : out(result)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return result;
@@ -1082,6 +1102,51 @@ The following identifiers are reserved because they are keywords in C11:
 
 #### Operators
 `and`, `or`
+
+### 17. C Interoperability
+
+Zen C offers two ways to interact with C code: **Trusted Imports** (Convenient) and **Explicit FFI** (Safe/Precise).
+
+#### Method 1: Trusted Imports (Convenient)
+
+You can import a C header directly using the `import` keyword with the `.h` extension. This treats the header as a module and assumes all symbols accessed through it exist.
+
+```zc
+//> link: -lm
+import "math.h" as c_math;
+
+fn main() {
+    // Compiler trusts correctness; emits 'cos(...)' directly
+    let x = c_math::cos(3.14159);
+}
+```
+
+> **Pros**: Zero boilerplate. Access everything in the header immediately.
+> **Cons**: No type safety from Zen C (errors caught by C compiler later).
+
+#### Method 2: Explicit FFI (Safe)
+
+For strict type checking or when you don't want to include the text of a header, use `extern fn`.
+
+```zc
+include <stdio.h> // Emits #include <stdio.h> in generated C
+
+// Define strict signature
+extern fn printf(fmt: char*, ...) -> c_int;
+
+fn main() {
+    printf("Hello FFI: %d\n", 42); // Type checked by Zen C
+}
+```
+
+> **Pros**: Zen C ensures types match.
+> **Cons**: Requires manual declaration of functions.
+
+#### `import` vs `include`
+
+- **`import "file.h"`**: Registers the header as a named module. Enables implicit access to symbols (for example, `file::function()`).
+- **`include <file.h>`**: Purely emits `#include <file.h>` in the generated C code. Does not introduce any symbols to the Zen C compiler; you must use `extern fn` to access them.
+
 
 ---
 

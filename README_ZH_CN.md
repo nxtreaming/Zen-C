@@ -1,7 +1,7 @@
 
 <div align="center">
 
-[English](README.md) • [简体中文](README_ZH_CN.md) • [繁體中文](README_ZH_TW.md) • [Español](README_ES.md)
+[English](README.md) • [简体中文](README_ZH_CN.md) • [繁體中文](README_ZH_TW.md) • [Español](README_ES.md) • [Italiano](README_IT.md)
 
 </div>
 
@@ -13,7 +13,7 @@
 
 [![构建状态](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![许可证](https://img.shields.io/badge/license-MIT-blue)]()
-[![版本](https://img.shields.io/badge/version-0.1.0-orange)]()
+[![版本](https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange)]()
 [![平台](https://img.shields.io/badge/platform-linux-lightgrey)]()
 
 *像高级语言一样编写，像 C 一样运行。*
@@ -100,6 +100,7 @@
         - [命名约束](#命名约束)
     - [15. 构建指令](#15-构建指令)
     - [16. 关键字](#16-关键字)
+    - [17. C 互操作性](#17-c-互操作性)
 - [标准库](#标准库)
 - [工具链](#工具链)
     - [语言服务器 (LSP)](#语言服务器-lsp)
@@ -203,7 +204,11 @@ let y: const int = 10;  // 只读 (类型修饰)
 
 | 类型 | C 等效类型 | 描述 |
 |:---|:---|:---|
-| `int`, `uint` | `int`, `unsigned int` | 平台标准整数 |
+| `int`, `uint` | `int32_t`, `uint32_t` | 32位有符号/无符号整数 |
+| `c_char`, `c_uchar` | `char`, `unsigned char` | C char (互操作) |
+| `c_short`, `c_ushort` | `short`, `unsigned short` | C short (互操作) |
+| `c_int`, `c_uint` | `int`, `unsigned int` | C int (互操作) |
+| `c_long`, `c_ulong` | `long`, `unsigned long` | C long (互操作) |
 | `I8` .. `I128` 或 `i8` .. `i128` | `int8_t` .. `__int128_t` | 有符号固定宽度整数 |
 | `U8` .. `U128` 或 `u8` .. `u128` | `uint8_t` .. `__uint128_t` | 无符号固定宽度整数 |
 | `isize`, `usize` | `ptrdiff_t`, `size_t` | 指针大小的整数 |
@@ -215,6 +220,12 @@ let y: const int = 10;  // 只读 (类型修饰)
 | `U0`, `u0`, `void` | `void` | 空类型 |
 | `iN` (例 `i256`) | `_BitInt(N)` | 任意位宽有符号整数 (C23) |
 | `uN` (例 `u42`) | `unsigned _BitInt(N)` | 任意位宽无符号整数 (C23) |
+
+> **可移植代码最佳实践**
+>
+> - 对于所有纯 Zen C 逻辑，请使用 **可移植类型** (`int`、`uint`、`i64`、`u8` 等)。`int` 保证在所有架构上都是 32 位有符号整数。
+> - 仅在与 C 库 (FFI) 交互时使用 **C 互操作类型** (`c_int`、`c_char`、`c_long`)。它们的大小因平台和 C 编译器而异。
+> - 使用 `isize` 和 `usize` 进行数组索引和内存指针运算。
 
 ### 3. 复合类型
 
@@ -485,26 +496,33 @@ match opt {
 }
 ```
 
-#### 循环
+#### 循環
 ```zc
-// 区间迭代
-for i in 0..10 { ... }      // 左闭右开 (0 到 9)
-for i in 0..<10 { ... }     // 左闭右开 (显式)
-for i in 0..=10 { ... }     // 全闭 (0 到 10)
+// 區間迭代
+for i in 0..10 { ... }      // 左閉右開 (0 到 9)
+for i in 0..<10 { ... }     // 左閉右開 (顯式)
+for i in 0..=10 { ... }     // 全閉 (0 到 10)
 for i in 0..10 step 2 { ... }
 
-// 迭代器 (Vec, Array, 或自定义 Iterable)
-for item in collection { ... }
+// 迭代器 (Vec 或自定義 Iterable)
+for item in vec { ... }
 
-// While 循环
+// 直接迭代固定大小数组
+let arr: int[5] = [1, 2, 3, 4, 5];
+for val in arr {
+    // val 是 int
+    println "{val}";
+}
+
+// While 循環
 while x < 10 { ... }
 
-// 带标签的无限循环
+// 帶標籤的無限循環
 outer: loop {
     if done { break outer; }
 }
 
-// 重复 N 次
+// 重複 N 次
 for _ in 0..5 { ... }
 ```
 
@@ -606,7 +624,7 @@ Zen C 支持使用 `?` 前缀进行用户输入提示的简写。
 - `? "输入年龄: " (age)`: 打印提示并扫描输入到变量 `age` 中。
     - 格式说明符会根据变量类型自动推断。
 
-```c
+```zc
 let age: int;
 ? "你多大了？ " (age);
 println "你 {age} 岁了。";
@@ -938,6 +956,7 @@ let re = regex! { ^[a-z]+$ };
 | `@host` | 函数 | CUDA: 主机函数 (`__host__`)。 |
 | `@comptime` | 函数 | 用于编译时执行的辅助函数。 |
 | `@derive(...)` | 结构体 | 自动实现 Trait。支持 `Debug`, `Eq` (智能派生), `Copy`, `Clone`。 |
+| `@ctype("type")` | 函数参数 | 覆盖参数生成的 C 类型。 |
 | `@<custom>` | 任意 | 将泛型属性传递给 C (例如 `@flatten`, `@alias("name")`)。 |
 
 #### 自定义属性
@@ -988,12 +1007,13 @@ Zen C 通过命名绑定简化了复杂的 GCC 约束语法。
 // 语法: : out(变量) : in(变量) : clobber(寄存器)
 // 使用 {变量} 占位符语法以提高可读性
 
-fn add(a: int, b: int) -> int {
+fn add_five(x: int) -> int {
     let result: int;
     asm {
-        "add {result}, {a}, {b}"
+        "mov {x}, {result}"
+        "add $5, {result}"
         : out(result)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return result;
@@ -1081,6 +1101,51 @@ fn main() { ... }
 
 #### 运算符
 `and`, `or`
+
+### 17. C 互操作性
+
+Zen C 提供了两种与 C 代码交互的方式：**信任导入 (Trusted Imports)** (方便) 和 **显式 FFI** (安全/精确)。
+
+#### 方法 1: 信任导入 (方便)
+
+你可以使用 `import` 关键字直接导入 `.h` 扩展名的 C 头文件。这会将头文件视为一个模块，并假设通过它访问的所有符号都存在。
+
+```zc
+//> link: -lm
+import "math.h" as c_math;
+
+fn main() {
+    // 编译器信任不仅正确；直接生成 'cos(...)'
+    let x = c_math::cos(3.14159);
+}
+```
+
+> **优点**: 零样板代码。立即访问头文件中的所有内容。
+> **缺点**: Zen C 不提供类型安全 (错误将在稍后由 C 编译器捕获)。
+
+#### 方法 2: 显式 FFI (安全)
+
+对于严格的类型检查，或当你不想包含头文件文本时，请使用 `extern fn`.
+
+```zc
+include <stdio.h> // 在生成的 C 代码中发出 #include <stdio.h>
+
+// 定义严格签名
+extern fn printf(fmt: char*, ...) -> c_int;
+
+fn main() {
+    printf("Hello FFI: %d\n", 42); // 由 Zen C 进行类型检查
+}
+```
+
+> **优点**: Zen C 确保类型匹配。
+> **缺点**: 需要手动声明函数。
+
+#### `import` vs `include`
+
+- **`import "file.h"`**: 将头文件注册为命名模块。启用对符号的隐式访问 (例如 `file::function()`)。
+- **`include <file.h>`**: 纯粹在生成的 C 代码中发出 `#include <file.h>`。不向 Zen C 编译器引入任何符号；必须使用 `extern fn` 才能访问它们。
+
 
 ---
 

@@ -50,6 +50,7 @@ void emit_preamble(ParserContext *ctx, FILE *out)
     else
     {
         // Standard hosted preamble.
+        fputs("#define _GNU_SOURCE\n", out);
         fputs("#include <stdio.h>\n#include <stdlib.h>\n#include "
               "<stddef.h>\n#include <string.h>\n",
               out);
@@ -698,7 +699,7 @@ void emit_globals(ParserContext *ctx, ASTNode *node, FILE *out)
 }
 
 // Emit function prototypes
-void emit_protos(ASTNode *node, FILE *out)
+void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
 {
     ASTNode *f = node;
     while (f)
@@ -721,7 +722,7 @@ void emit_protos(ASTNode *node, FILE *out)
             }
             else
             {
-                emit_func_signature(out, f, NULL);
+                emit_func_signature(ctx, out, f, NULL);
                 fprintf(out, ";\n");
             }
         }
@@ -799,7 +800,7 @@ void emit_protos(ASTNode *node, FILE *out)
                 }
                 else
                 {
-                    emit_func_signature(out, m, proto);
+                    emit_func_signature(ctx, out, m, proto);
                     fprintf(out, ";\n");
                 }
 
@@ -1129,12 +1130,23 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
         fprintf(out, "typedef struct Tuple_%s Tuple_%s;\nstruct Tuple_%s { ", t->sig, t->sig,
                 t->sig);
         char *s = xstrdup(t->sig);
-        char *p = strtok(s, "_");
+        char *current = s;
+        char *next_sep = strstr(current, "__");
         int i = 0;
-        while (p)
+        while (current)
         {
-            fprintf(out, "%s v%d; ", p, i++);
-            p = strtok(NULL, "_");
+            if (next_sep)
+            {
+                *next_sep = 0;
+                fprintf(out, "%s v%d; ", current, i++);
+                current = next_sep + 2;
+                next_sep = strstr(current, "__");
+            }
+            else
+            {
+                fprintf(out, "%s v%d; ", current, i++);
+                break;
+            }
         }
         free(s);
         fprintf(out, "};\n");

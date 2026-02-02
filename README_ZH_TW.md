@@ -1,7 +1,7 @@
 
 <div align="center">
 
-[English](README.md) • [简体中文](README_ZH_CN.md) • [繁體中文](README_ZH_TW.md) • [Español](README_ES.md)
+[English](README.md) • [简体中文](README_ZH_CN.md) • [繁體中文](README_ZH_TW.md) • [Español](README_ES.md) • [Italiano](README_IT.md)
 
 </div>
 
@@ -13,7 +13,7 @@
 
 [![構建狀態](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![許可證](https://img.shields.io/badge/license-MIT-blue)]()
-[![版本](https://img.shields.io/badge/version-0.1.0-orange)]()
+[![版本](https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange)]()
 [![平台](https://img.shields.io/badge/platform-linux-lightgrey)]()
 
 *像高級語言一樣編寫，像 C 一樣運行。*
@@ -100,6 +100,7 @@
         - [命名約束](#命名約束)
     - [15. 構建指令](#15-構建指令)
     - [16. 關鍵字](#16-關鍵字)
+    - [17. C 互操作性](#17-c-互操作性)
 - [標準庫](#標準庫)
 - [工具鏈](#工具鏈)
     - [語言服務器 (LSP)](#語言服務器-lsp)
@@ -203,7 +204,11 @@ let y: const int = 10;  // 只讀 (類型修飾)
 
 | 類型 | C 等效類型 | 描述 |
 |:---|:---|:---|
-| `int`, `uint` | `int`, `unsigned int` | 平台標準整數 |
+| `int`, `uint` | `int32_t`, `uint32_t` | 32位元有號/無號整數 |
+| `c_char`, `c_uchar` | `char`, `unsigned char` | C char (互操作) |
+| `c_short`, `c_ushort` | `short`, `unsigned short` | C short (互操作) |
+| `c_int`, `c_uint` | `int`, `unsigned int` | C int (互操作) |
+| `c_long`, `c_ulong` | `long`, `unsigned long` | C long (互操作) |
 | `I8` .. `I128` 或 `i8` .. `i128` | `int8_t` .. `__int128_t` | 有符號固定寬度整數 |
 | `U8` .. `U128` 或 `u8` .. `u128` | `uint8_t` .. `__uint128_t` | 無符號固定寬度整數 |
 | `isize`, `usize` | `ptrdiff_t`, `size_t` | 指針大小的整數 |
@@ -214,7 +219,13 @@ let y: const int = 10;  // 只讀 (類型修飾)
 | `string` | `char*` | C-string (以 null 結尾) |
 | `U0`, `u0`, `void` | `void` | 空類型 |
 | `iN` (例 `i256`) | `_BitInt(N)` | 任意位元寬度有號整數 (C23) |
-| `uN` (例 `u42`) | `unsigned _BitInt(N)` | 任意位元寬度無號整數 (C23) |
+| `uN` (例 `u42`) | `unsigned _BitInt(N)` | 任意位寬無號整數 (C23) |
+
+> **可移植代碼最佳實踐**
+>
+> - 對於所有純 Zen C 邏輯，請使用 **可移植類型** (`int`、`uint`、`i64`、`u8` 等)。`int` 保證在所有架構上都是 32 位元有號整數。
+> - 僅在與 C 庫 (FFI) 交互時使用 **C 互操作類型** (`c_int`、`c_char`、`c_long`)。它們的大小因平台和 C 編譯器而異。
+> - 使用 `isize` 和 `usize` 進行數組索引和內存指針運算。
 
 ### 3. 複合類型
 
@@ -493,8 +504,15 @@ for i in 0..<10 { ... }     // 左閉右開 (顯式)
 for i in 0..=10 { ... }     // 全閉 (0 到 10)
 for i in 0..10 step 2 { ... }
 
-// 迭代器 (Vec, Array, 或自定義 Iterable)
-for item in collection { ... }
+// 迭代器 (Vec 或自定義 Iterable)
+for item in vec { ... }
+
+// 直接迭代固定大小數組
+let arr: int[5] = [1, 2, 3, 4, 5];
+for val in arr {
+    // val 是 int
+    println "{val}";
+}
 
 // While 循環
 while x < 10 { ... }
@@ -606,7 +624,7 @@ Zen C 支持使用 `?` 前綴進行用戶輸入提示的簡寫。
 - `? "輸入年齡: " (age)`: 打印提示並掃描輸入到變量 `age` 中。
     - 格式說明符會根據變量類型自動推斷。
 
-```c
+```zc
 let age: int;
 ? "你多大了？ " (age);
 println "你 {age} 歲了。";
@@ -938,6 +956,7 @@ let re = regex! { ^[a-z]+$ };
 | `@host` | 函數 | CUDA: 主機函數 (`__host__`)。 |
 | `@comptime` | 函數 | 用於編譯時執行的輔助函數。 |
 | `@derive(...)` | 結構體 | 自動實現 Trait。支持 `Debug`, `Eq` (智能派生), `Copy`, `Clone`。 |
+| `@ctype("type")` | 函數參數 | 覆蓋參數生成的 C 類型。 |
 | `@<custom>` | 任意 | 將泛型屬性傳遞給 C (例如 `@flatten`, `@alias("name")`)。 |
 
 #### 自定義屬性
@@ -988,12 +1007,13 @@ Zen C 通過命名綁定簡化了複雜的 GCC 約束語法。
 // 語法: : out(變量) : in(變量) : clobber(寄存器)
 // 使用 {變量} 佔位符語法以提高可讀性
 
-fn add(a: int, b: int) -> int {
+fn add_five(x: int) -> int {
     let result: int;
     asm {
-        "add {result}, {a}, {b}"
+        "mov {x}, {result}"
+        "add $5, {result}"
         : out(result)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return result;
@@ -1081,6 +1101,51 @@ fn main() { ... }
 
 #### 運算符
 `and`, `or`
+
+### 17. C 互操作性
+
+Zen C 提供了兩種與 C 代碼交互的方式：**信任導入 (Trusted Imports)** (方便) 和 **顯式 FFI** (安全/精確)。
+
+#### 方法 1: 信任導入 (方便)
+
+你可以使用 `import` 關鍵字直接導入 `.h` 擴展名的 C 頭文件。這會將頭文件視為一個模塊，並假設通過它訪問的所有符號都存在。
+
+```zc
+//> link: -lm
+import "math.h" as c_math;
+
+fn main() {
+    // 編譯器信任不僅正確；直接生成 'cos(...)'
+    let x = c_math::cos(3.14159);
+}
+```
+
+> **優點**: 零樣板代碼。立即訪問頭文件中的所有內容。
+> **缺點**: Zen C 不提供類型安全 (錯誤將在稍後由 C 編譯器捕獲)。
+
+#### 方法 2: 顯式 FFI (安全)
+
+對於嚴格的類型檢查，或當你不想包含頭文件文本時，請使用 `extern fn`.
+
+```zc
+include <stdio.h> // 在生成的 C 代碼中發出 #include <stdio.h>
+
+// 定義嚴格簽名
+extern fn printf(fmt: char*, ...) -> c_int;
+
+fn main() {
+    printf("Hello FFI: %d\n", 42); // 由 Zen C 進行類型檢查
+}
+```
+
+> **優點**: Zen C 確保類型匹配。
+> **缺點**: 需要手動聲明函數。
+
+#### `import` vs `include`
+
+- **`import "file.h"`**: 將頭文件註冊為命名模塊。啟用對符號的隱式訪問 (例如 `file::function()`)。
+- **`include <file.h>`**: 純粹在生成的 C 代碼中發出 `#include <file.h>`。不向 Zen C 編譯器引入任何符號；必須使用 `extern fn` 才能訪問它們。
+
 
 ---
 

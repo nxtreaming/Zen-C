@@ -16,6 +16,9 @@
 #define TOKEN_TYPE_ENUM 8
 #define TOKEN_TYPE_MEMBER 9
 #define TOKEN_TYPE_OPERATOR 10
+#define TOKEN_TYPE_PARAMETER 11
+#define TOKEN_TYPE_MACRO 12
+#define TOKEN_TYPE_TYPE_PARAMETER 13
 
 typedef struct
 {
@@ -90,7 +93,16 @@ static void traverse_node(TokenBuilder *b, ASTNode *node)
         if (node->token.type != TOK_EOF)
         {
             builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
-                         TOKEN_TYPE_FUNCTION, 1); // 1 = declaration modifier? No, bitmask.
+                         TOKEN_TYPE_FUNCTION, 1);
+        }
+        // Parameters
+        for (int i = 0; i < node->func.arg_count; i++)
+        {
+            Attribute *attr = node->func.attributes;
+            while (attr)
+            {
+                attr = attr->next;
+            }
         }
         traverse_node(b, node->func.body);
         break;
@@ -133,6 +145,23 @@ static void traverse_node(TokenBuilder *b, ASTNode *node)
                 traverse_node(b, arg);
                 arg = arg->next;
             }
+        }
+        break;
+
+    case NODE_CONST:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_VARIABLE, 2);
+        }
+        traverse_node(b, node->var_decl.init_expr);
+        break;
+
+    case NODE_TYPE_ALIAS:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_TYPE, 0);
         }
         break;
 
@@ -192,10 +221,82 @@ static void traverse_node(TokenBuilder *b, ASTNode *node)
         }
         break;
 
+    case NODE_TRAIT:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_STRUCT, 0);
+        }
+        traverse_node(b, node->trait.methods);
+        break;
+
+    case NODE_IMPL:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_STRUCT, 0);
+        }
+        traverse_node(b, node->impl.methods);
+        break;
+
+    case NODE_IMPL_TRAIT:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_STRUCT, 0);
+        }
+        traverse_node(b, node->impl_trait.methods);
+        break;
+
+    case NODE_ENUM:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_ENUM, 0);
+        }
+        traverse_node(b, node->enm.variants);
+        break;
+
+    case NODE_ENUM_VARIANT:
+        if (node->token.type != TOK_EOF)
+        {
+            builder_push(b, node->token.line - 1, node->token.col - 1, node->token.len,
+                         TOKEN_TYPE_ENUM, 0);
+        }
+        if (node->variant.payload)
+        {
+            // If we had a way to traverse types with tokens...
+        }
+        break;
+
+    case NODE_DESTRUCT_VAR:
+        traverse_node(b, node->destruct.init_expr);
+        traverse_node(b, node->destruct.else_block);
+        break;
+
+    case NODE_MATCH_CASE:
+        traverse_node(b, node->match_case.guard);
+        traverse_node(b, node->match_case.body);
+        break;
+
+    case NODE_LAMBDA:
+        traverse_node(b, node->lambda.body);
+        break;
+
+    case NODE_FOR_RANGE:
+        traverse_node(b, node->for_range.start);
+        traverse_node(b, node->for_range.end);
+        traverse_node(b, node->for_range.body);
+        break;
+
     default:
         if (node->type == NODE_ROOT)
         {
             traverse_node(b, node->root.children);
+        }
+        else if (node->next)
+        {
+            // Fallback to next
         }
         break;
     }

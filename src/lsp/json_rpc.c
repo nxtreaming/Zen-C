@@ -120,7 +120,8 @@ void handle_request(const char *json_str)
             "\"triggerCharacters\":[\".\"]},"
             "\"semanticTokensProvider\":{\"legend\":{\"tokenTypes\":[\"variable\",\"function\","
             "\"struct\",\"keyword\",\"string\",\"number\",\"comment\",\"type\",\"enum\",\"member\","
-            "\"operator\"],\"tokenModifiers\":[\"declaration\",\"definition\",\"readonly\","
+            "\"operator\",\"parameter\",\"macro\",\"typeParameter\"],\"tokenModifiers\":["
+            "\"declaration\",\"definition\",\"readonly\","
             "\"static\",\"deprecated\",\"abstract\",\"async\",\"modification\",\"documentation\","
             "\"defaultLibrary\"]},\"full\":true}"
             "}}}}}";

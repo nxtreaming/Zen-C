@@ -49,9 +49,11 @@ void print_usage()
     printf("  -g              Debug info\n");
     printf("  -v, --verbose   Verbose output\n");
     printf("  -q, --quiet     Quiet output\n");
+    printf("  --json          Emit diagnostics as JSON objects\n");
     printf("  --no-zen        Disable Zen facts\n");
     printf("  -c              Compile only (produce .o)\n");
     printf("  --cpp           Use C++ mode.\n");
+    printf("  --objective-c   Use Objective-C mode.\n");
     printf("  --cuda          Use CUDA mode (requires nvcc).\n");
 }
 
@@ -142,6 +144,10 @@ int main(int argc, char **argv)
         {
             g_config.emit_c = 1;
         }
+        else if (strcmp(arg, "--json") == 0)
+        {
+            g_config.json_output = 1;
+        }
         else if (strcmp(arg, "--keep-comments") == 0)
         {
             g_config.keep_comments = 1;
@@ -178,7 +184,7 @@ int main(int argc, char **argv)
             g_config.use_cuda = 1;
             g_config.use_cpp = 1; // CUDA implies C++ mode.
         }
-        else if (strcmp(arg, "--objc") == 0)
+        else if (strcmp(arg, "--objc") == 0 || strcmp(arg, "--objective-c") == 0)
         {
             g_config.use_objc = 1;
         }
@@ -296,7 +302,6 @@ int main(int argc, char **argv)
         // Type validation failed
         return 1;
     }
-
 
     if (g_config.mode_check)
     {

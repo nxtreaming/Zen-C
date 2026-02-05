@@ -52,6 +52,11 @@ void zwarn(const char *fmt, ...);
  */
 void zwarn_at(Token t, const char *fmt, ...);
 
+/**
+ * @brief Non-fatal warning with suggestion.
+ */
+void zwarn_with_suggestion(Token t, const char *msg, const char *suggestion);
+
 // ** Specific Error Types **
 
 void error_undefined_function(Token t, const char *func_name, const char *suggestion);

@@ -134,6 +134,11 @@ install(FILES plugins/zprep_plugin.h DESTINATION include/zenc)
 install(DIRECTORY ${CMAKE_BINARY_DIR}/plugins/ DESTINATION lib/zenc/plugins 
         FILES_MATCHING PATTERN "*.${PLUGIN_EXT}")
 
+if(UNIX AND NOT WIN32)
+    install(FILES man/zc.1 DESTINATION share/man/man1)
+    install(FILES man/zc.5 DESTINATION share/man/man5)
+    install(FILES man/zc.7 DESTINATION share/man/man7)
+endif()
 # Test target
 add_custom_target(test
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_tests.sh

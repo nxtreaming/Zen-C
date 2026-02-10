@@ -48,6 +48,14 @@
 
 - Discord: [点击加入](https://discord.com/invite/q6wEsCmkJP)
 
+## 展示
+
+查看这些使用 Zen C 构建的项目：
+
+- **[ZC-pong-3ds](https://github.com/5quirre1/ZC-pong-3ds)**: Nintendo 3DS 上的 Pong 克隆版。
+- **[zen-c-parin](https://github.com/Kapendev/zen-c-parin)**: 使用 Parin 的 Zen C 基础示例。
+- **[almond](https://git.sr.ht/~leanghok/almond)**: 用 Zen C 编写的极简网页浏览器。
+
 ---
 
 ## 目录

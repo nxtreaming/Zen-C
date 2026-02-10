@@ -48,6 +48,14 @@
 
 - Discord: [Присоединиться](https://discord.com/invite/q6wEsCmkJP)
 
+## Галерея
+
+Посмотрите на эти проекты, созданные на Zen C:
+
+- **[ZC-pong-3ds](https://github.com/5quirre1/ZC-pong-3ds)**: Клон Pong для Nintendo 3DS.
+- **[zen-c-parin](https://github.com/Kapendev/zen-c-parin)**: Базовый пример использования Zen C с Parin.
+- **[almond](https://git.sr.ht/~leanghok/almond)**: Минималистичный веб-браузер, написанный на Zen C.
+
 ---
 
 ## Содержание

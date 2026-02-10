@@ -103,6 +103,7 @@ Participe das discussões, compartilhe demos, pergunte, ou reporte bugs no servi
 ```bash
 git clone https://github.com/z-libs/Zen-C.git
 cd Zen-C
+make clean # remove arquivos de build antigos
 make
 sudo make install
 ```

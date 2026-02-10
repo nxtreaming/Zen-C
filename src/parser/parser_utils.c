@@ -2343,7 +2343,6 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
                     char *template_name = t->name;
                     char *concrete_arg = (char *)name + tlen + 1; // cast to avoid warning
 
-                    Token dummy_tok = {0};
                     char *unmangled = unmangle_ptr_suffix(concrete_arg);
                     instantiate_function_template(ctx, template_name, concrete_arg, unmangled);
                     free(unmangled);

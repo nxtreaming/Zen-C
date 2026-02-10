@@ -100,6 +100,7 @@
 ```bash
 git clone https://github.com/z-libs/Zen-C.git
 cd Zen-C
+make clean # удалить старые файлы сборки
 make
 sudo make install
 ```

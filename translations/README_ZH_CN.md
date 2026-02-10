@@ -103,6 +103,7 @@
 ```bash
 git clone https://github.com/z-libs/Zen-C.git
 cd Zen-C
+make clean # 移除旧的构建文件
 make
 sudo make install
 ```

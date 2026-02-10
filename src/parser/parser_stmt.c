@@ -3236,7 +3236,9 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         for (size_t i = 0; i < system_paths_count && !found; i++)
         {
             if (!system_paths[i])
+            {
                 continue;
+            }
             snprintf(system_path, sizeof(system_path), "%s/%s", system_paths[i], fn);
             if (access(system_path, R_OK) == 0)
             {

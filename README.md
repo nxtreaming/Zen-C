@@ -1415,7 +1415,7 @@ zc run app.zc --cc zig
 </details>
 
 > [!WARNING]
-> **COMPILER BUILD WARNING:** While **TCC** and **Zig CC** work excellently as backends for your Zen C programs, building the *Zen C compiler itself* with them may verify but produce an unstable binary that fails tests. We recommend building the compiler with **GCC** or **Clang** and using TCC/Zig only as a backend for your operational code.
+> **COMPILER BUILD WARNING:** While **Zig CC** works excellently as a backend for your Zen C programs, building the *Zen C compiler itself* with it may verify but produce an unstable binary that fails tests. We recommend building the compiler with **GCC** or **Clang** and using Zig only as a backend for your operational code.
 
 ### Building with Zig
 

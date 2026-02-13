@@ -1405,7 +1405,7 @@ zc run app.zc --cc zig
 </details>
 
 > [!WARNING]
-> **AVVISO DI COMPILAZIONE:** Sebbene **TCC** e **Zig CC** funzionino ottimamente come backend specifici per i tuoi programmi Zen C, compilare il *compilatore Zen C stesso* con essi potrebbe verificare ma produrre un binario instabile che fallisce i test. Consigliamo di compilare il compilatore con **GCC** o **Clang** e usare TCC/Zig solo come backend per il tuo codice operativo.
+> **AVVISO DI COMPILAZIONE:** Sebbene **Zig CC** funzioni ottimamente come backend per i tuoi programmi Zen C, compilare il *compilatore Zen C stesso* con esso potrebbe verificare ma produrre un binario instabile che fallisce i test. Consigliamo di compilare il compilatore con **GCC** o **Clang** e usare Zig solo come backend per il tuo codice operativo.
 
 > [!TIP]### Buildare con Zig
 

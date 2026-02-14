@@ -885,25 +885,29 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
         t = type_new_ptr(t);
     }
 
-    // 4. Handle Array Suffixes (e.g. int[10])
+    int *dims = NULL;
+    int dims_cap = 0;
+    int dims_count = 0;
+
     while (lexer_peek(l).type == TOK_LBRACKET)
     {
-        lexer_next(l); // consume '['
+        lexer_next(l);
 
-        // Check for slice []
+        if (dims_count == dims_cap)
+        {
+            dims_cap = dims_cap == 0 ? 4 : dims_cap * 2;
+            dims = xrealloc(dims, sizeof(int) * dims_cap);
+        }
+
         if (lexer_peek(l).type == TOK_RBRACKET)
         {
-            lexer_next(l); // consume ']'
+            lexer_next(l);
 
-            // Register slice
             char *inner_str = type_to_string(t);
             register_slice(ctx, inner_str);
             free(inner_str);
 
-            Type *slice = type_new(TYPE_ARRAY);
-            slice->inner = t;
-            slice->array_size = 0; // 0 for slice
-            t = slice;
+            dims[dims_count++] = 0;
             continue;
         }
 
@@ -924,10 +928,20 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
             zpanic_at(lexer_peek(l), "Expected ']' in array type");
         }
 
+        dims[dims_count++] = size;
+    }
+
+    for (int i = dims_count - 1; i >= 0; i--)
+    {
         Type *arr = type_new(TYPE_ARRAY);
         arr->inner = t;
-        arr->array_size = size;
+        arr->array_size = dims[i];
         t = arr;
+    }
+
+    if (dims)
+    {
+        free(dims);
     }
 
     if (is_restrict)
@@ -950,7 +964,7 @@ char *parse_type(ParserContext *ctx, Lexer *l)
 
 char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st)
 {
-    (void)ctx; // suppress unused parameter warning
+    (void)ctx;
     lexer_next(l);
     size_t cap = 128;
     char *c = xmalloc(cap);
